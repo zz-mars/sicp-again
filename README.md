@@ -1,4 +1,4 @@
 sicp-again
 ==========
 
-code of SICP
+code 4 SICP
