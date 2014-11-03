@@ -82,8 +82,8 @@
 (define (f-recur n)
   (if (< n 3) n
       (+ (f-recur (- n 1))
-(edit	 (* (f-recur (- n 2)) 2)
-	 (* (f-recur (- n 3)) 3)))))
+	 (* (f-recur (- n 2)) 2)
+	 (* (f-recur (- n 3)) 3))))
 (define (f-iter n)
   (define (iter count a b c)
     (if (= count n) c
