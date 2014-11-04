@@ -8,6 +8,10 @@
   (not (< x y)))
 (define (square x)
   (* x x))
+
+(define (cube x)
+  (* x x x))
+
 (define (sum-of-square x y)
   (+ (square x) (square y)))
 (define (old-sqrt x)
@@ -97,18 +101,29 @@
 	((or (= i 1) (= i n)) 1)
 	(else (+ (pascal-triangle (- n 1) (- i 1))
 		 (pascal-triangle (- n 1) i)))))
+(define (even? x)
+  (= (remainder x 2) 0))
+; exercise 1.16
+(define (exp m n)
+  (define (exp-iter res x y)
+    (cond ((= y 0) res)
+	  ((even? y) (exp-iter res (square x) (/ y 2)))
+	  (else (exp-iter (* res x) x (- y 1)))))
+  (if (= m 0) 0
+      (exp-iter 1 m n)))
 
+; exercise 1.17
 
+; exercise 1.19
+(define (fib n)
+  (define (fib-iter a b p q s)
+    (cond ((= s 0) b)
+	  ((even? s) (fib-iter a b
+			       (+ (square p) (square q)) (+ (square q) (* 2 p q))
+			       (/ s 2)))
+	  (else (fib-iter (+ (* (+ a b) q) (* a p)) (+ (* b p) (* a q)) p q (- s 1)))))
+  (fib-iter 1 0 0 1 n))
 
-
-
-
-
-
-
-
-
-
-
-
-
+(define (gcd a b)
+  (if (= b 0) a
+      (gcd b (remainder a b))))
