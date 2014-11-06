@@ -127,3 +127,69 @@
 (define (gcd a b)
   (if (= b 0) a
       (gcd b (remainder a b))))
+
+(define (divides? a b)
+  (= (remainder b a) 0))
+
+(define (smallest-divisor n)
+  (define (iter candidate)
+    (cond ((> (square candidate) n) n)
+	  ((divides? candidate n) candidate)
+	  (else (iter (+ 2 candidate)))))
+  (if (divides? 2 n) 2
+      (iter 3)))
+
+(define (prime? n)
+  (= n (smallest-divisor n)))
+
+; exercise 1.22
+(define (timed-prime-test n)
+  (define (report-time elapsed-time)
+    (display " ***")
+    (display elapsed-time))
+  (define (start-test start-time)
+    (if (prime? n)
+	(report-time (- (runtime) start-time))))
+  (newline)
+  (display n)
+  (start-test (runtime)))
+
+(define (find-prime start-num)
+  (if (prime? start-num)
+      (timed-prime-test start-num)
+      (find-prime (+ start-num 1))))
+
+; exercise 1.24
+;(define (expmod base ep m)
+ ; (remainder (exp base ep) m))
+(define (expmod base ep m)
+  (cond ((= ep 0) 1)
+	((even? ep)
+	 (remainder (square (expmod base (/ ep 2) m)) m))
+	(else 
+	 (remainder (* base (expmod base (- ep 1) m)) m))))
+
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+	((fermat-test n) (fast-prime? n (- times 1)))
+	(else false)))
+
+(define (timed-fast-prime-test n)
+  (define (report-time elapsed-time)
+    (display " ***")
+    (display elapsed-time))
+  (define (start-test start-time)
+    (if (fast-prime? n 3)
+	(report-time (- (runtime) start-time))))
+  (newline)
+  (display n)
+  (start-test (runtime)))
+
+(define (fast-find-prime start-num)
+  (if (fast-prime? start-num 3)
+      (timed-fast-prime-test start-num)
+      (fast-find-prime (+ start-num 1))))
