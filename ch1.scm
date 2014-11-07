@@ -193,3 +193,80 @@
   (if (fast-prime? start-num 3)
       (timed-fast-prime-test start-num)
       (fast-find-prime (+ start-num 1))))
+
+; 1.3 high order procedure
+; exercise 1.30
+(define (sum term a next b)
+  (define (sum-iter res it)
+    (if (> it b) res
+	(sum-iter (+ res (term it)) (next it))))
+  (sum-iter 0 a))
+
+(define (inc x) (+ x 1))
+(define (sum-cube a b)
+  (sum cube a inc b))
+(define (pi-sum a b)
+  (sum (lambda (x) (/ 1.0 (* x (+ x 2))))
+       a (lambda (x) (+ x 4)) b))
+
+(define (integral f a b dx)
+  (define (next-a a) (+ a dx))
+  (* dx (sum f (+ a (/ dx 2.0)) next-a b)))
+
+; exercise 1.29
+(define (simpson-integral f a b n)
+  (let ((h (/ (- b a) n)))
+    (* (/ h 3.0) 
+       (+ (f a) (f b) 
+	  (sum (lambda (k) (* (f (+ a (* k h))) (if (= (remainder k 2) 0) 2 4)))
+	       1 inc (- n 1))))))
+
+; exercise 1.31
+(define (identity x) x)
+(define (product-recur f a next b)
+  (if (> a b) 1
+      (* (f a) (product-recur f (next a) next b))))
+(define (product f a next b)
+  (define (product-iter res it)
+    (if (> it b) res
+	(product-iter (* res (f it)) (next it))))
+  (product-iter 1 a))
+(define (factorial-in-pruduct n)
+  (product identity 1 inc n))
+(define (compute-pi n) 
+  (* 4 (product 
+	(lambda (x) (/ (* (- x 1) (+ x 1)) (square x)))
+	3.0 (lambda (x) (+ x 2)) n)))
+
+; exercise 1.32
+(define (accumulate combiner null-value term a next b)
+  (define (accu-iter res it)
+    (if (> it b) res
+	(accu-iter (combiner res (term it)) (next it))))
+  (accu-iter null-value a))
+
+(define (accumulate-recur combiner null-value term a next b)
+  (if (> a b) null-value
+      (combiner 
+       (term a)
+       (accumulate-recur combiner null-value term (next a) next b))))
+
+(define (acc-sum f a next b)
+  (accumulate-recur + 0 f a next b))
+
+(define (acc-product f a next b)
+  (accumulate-recur * 1 f a next b))
+
+; exercise 1.33
+(define (filtered-acc combiner null-value filter term a next b)
+  (define (filtered-acc-iter res it)
+    (if (> it b) res
+	(filtered-acc-iter 
+	 (combiner res (if (filter it) (term it) null-value))
+	 (next it))))
+  (filtered-acc-iter null-value a))
+
+(define (e133b n)
+  (filtered-acc 
+   * 1
+   (lambda (x) (and (> x 0) (= (gcd x n) 1))) identity 1 inc n))
