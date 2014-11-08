@@ -341,3 +341,88 @@
   (cont-frac 
    (lambda (i) (if (= i 1) x (- (square x))))
    (lambda (i) (- (* 2 i) 1)) k))
+
+; 1.3.4 procedure as returned value
+(define (average-damp f)
+  (lambda (x) (average (f x) x)))
+(define (sqrt-with-average-damp x)
+  (fixed-point (average-damp (lambda (y) (/ x y))) 1.0))
+(define (sqrt-no-average x)
+  (fixed-point-no-average (average-damp (lambda (y) (/ x y))) 1.0))
+(define (cbrt-no-average x)
+  (fixed-point-no-average (average-damp (lambda (y) (/ x (square y)))) 1.0))
+
+; Newton's method
+(define (deriv g)
+  (let ((dx 0.000001))
+    (lambda (x)
+      (/ (- (g (+ x dx)) (g x)) dx))))
+(define (newton-transform g)
+  (lambda (x) 
+    (- x (/ (g x) ((deriv g) x)))))
+
+(define (newton-method g guess)
+  (fixed-point (newton-transform g) guess))
+
+; root of g(x)=0 is the fix point of newton-transform of g
+(define (sqrt-newton x)
+  (fixed-point
+   (newton-transform (lambda (y) (- (square y) x))) 1.0))
+
+; exercise 1.40
+(define (cubic a b c)
+  (lambda (x) 
+    (+ (cube x)
+       (* a (square x))
+       (* b x) c)))
+
+; exercise 1.41
+(define (double-proc f)
+  (lambda (x) (f (f x))))
+; exercise 1.42
+(define (compose f g)
+  (lambda (x) (f (g x))))
+; exercise 1.43
+(define (repeated f n)
+  (if (= n 1) f
+      (compose f (repeated f (- n 1)))))
+; exercise 1.44
+(define (smooth f)
+  (let ((dx 0.000001))
+    (lambda (x)
+      (/ (+ (f (- x dx))
+	    (f x)
+	    (f (+ x dx))) 3))))
+(define (nfold-smooth f n)
+  ((repeated smooth n) f))
+
+; exercise 1.45
+(define (raw-nth-root n x m-average-damp)
+  (fixed-point-no-average 
+   ((repeated average-damp m-average-damp)
+    (lambda (y) (/ x (exp y (- n 1)))))
+   1.0))
+
+(define (nth-root n x)
+  (raw-nth-root 
+   n x 
+   (truncate (/ (log n) (log 2)))))
+
+; exercise 1.46
+(define (iterative-improve good-enough? improve)
+  (lambda (init-guess)
+    (define (iter gus)
+      (let ((next-guess (improve gus)))
+	(if (good-enough? gus next-guess)
+	    gus (iter next-guess))))
+    (iter init-guess)))
+
+(define (ii-sqrt x)
+  ((iterative-improve 
+    (lambda (i j) (< (abs (- i j)) 0.00001))
+    (average-damp (lambda (y) (/ x y)))) 1.0))
+
+(define (ii-fixed-point f init-guess)
+  ((iterative-improve
+    (lambda (i j) (< (abs (- i j)) 0.00001))
+    (lambda (x) (f x))) init-guess))
