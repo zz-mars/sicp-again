@@ -1,7 +1,7 @@
 (define (abs x)
   (if (< x 0) (- x) x))
 (define (average x y)
-  (/ (+ x y) 2))
+  (/ (+ x y) 2.0))
 (define (<= x y)
   (not (> x y)))
 (define (>= x y)
@@ -270,3 +270,74 @@
   (filtered-acc 
    * 1
    (lambda (x) (and (> x 0) (= (gcd x n) 1))) identity 1 inc n))
+
+; 1.3.3 procedures as general methods
+(define (search f neg pos)
+  (define (close-enough? x y)
+    (< (abs (- x y)) 0.00001))
+  (let ((mid (average neg pos)))
+    (if (close-enough? neg pos)
+	mid
+	(let ((test-mid (f mid)))
+	  (cond ((> test-mid 0) (search f neg mid))
+		((= test-mid 0) mid)
+		(else (search f mid pos)))))))
+
+(define (half-interval-method f a b)
+  (let ((aval (f a))
+	(bval (f b)))
+    (cond ((and (negative? aval) (positive? bval))
+	   (search f a b))
+	  ((and (positive? aval) (negative? bval))
+	   (search f b a))
+	  (else (error "fval are not opposite sign!" a b)))))
+
+; fixed point
+(define (fixed-point f first-guess)
+  (define (close-enough? x y)
+    (< (abs (- x y)) 0.000001))
+  (define (try guess)
+    (newline)
+    (display "try guess -> ")
+    (display guess)
+    (let ((next-guess (average (f guess) guess)))
+      (if (close-enough? guess next-guess)
+	  guess
+	  (try next-guess))))
+  (try first-guess))
+
+(define (fixed-point-no-average f first-guess)
+  (define (close-enough? x y)
+    (< (abs (- x y)) 0.000001))
+  (define (try guess)
+    (newline)
+    (display "try guess -> ")
+    (display guess)
+    (let ((next-guess (f guess)))
+      (if (close-enough? guess next-guess)
+	  guess
+	  (try next-guess))))
+  (try first-guess))
+
+;(define (sqrt x)
+;  (fixed-point (lambda (y) (/ x y)) 1.0))
+
+; exercise 1.37
+(define (cont-frac n d k)
+  (define (iter res i)
+    (if (= i 0) res
+	(iter (/ (n i) (+ (d i) res)) (- i 1))))
+  (iter (/ (n k) (d k)) (- k 1)))
+
+(define (cont-frac-recur n d k)
+  (define (iter i)
+    (if (< i k)
+	(/ (n i) (+ (d i) (iter (+ i 1))))
+	(/ (n k) (d k))))
+  (iter 1))
+
+; exercise 1.39
+(define (tan-cf x k)
+  (cont-frac 
+   (lambda (i) (if (= i 1) x (- (square x))))
+   (lambda (i) (- (* 2 i) 1)) k))
