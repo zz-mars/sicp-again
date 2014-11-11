@@ -125,3 +125,50 @@
   (add-1 one))
 (define two
   (lambda (f) (lambda (x) (f (f x)))))
+
+; list operations
+(define (list-ref l n)
+  (if (null? l) '()
+      (if (= n 0) (car l)
+	  (list-ref (cdr l) (- n 1)))))
+(define (length l)
+  (define (iter res itl)
+    (if (null? itl) res
+	(iter (+ res 1) (cdr itl))))
+  (iter 0 l))
+(define (append l1 l2)
+  (if (null? l1) l2
+      (cons (car l1) (append (cdr l1) l2))))
+
+; exercise 2.17
+(define (last-pair l)
+  (if (> (length l) 1)
+      (last-pair (cdr l)) l))
+; exercise 2.18
+(define (reverse l)
+  (define (iter res lst)
+    (if (null? lst) res
+	(iter (cons (car lst) res) (cdr lst))))
+  (iter '() l))
+(define (reverse-recur l)
+  (if (null? l) '()
+      (append (reverse-recur (cdr l)) (list (car l)))))
+
+; exercise 2.19
+(define us-coins (list 50 25 10 5 1))
+(define uk-coins (list 100 50 20 10 5 2 1 0.5))
+(define (cc money coins-list)
+  (cond ((= money 0) 1)
+	((or (< money 0) (null? coins-list)) 0)
+	(else
+	 (+ (cc money (cdr coins-list))
+	    (cc (- money (car coins-list)) coins-list)))))
+
+; exercise 2.20
+(define (same-parity a1st . aleft)
+  (define (iter prt l)
+    (cond ((null? l) '())
+	  ((= (remainder (car l) 2) prt)
+	   (cons (car l) (iter prt (cdr l))))
+	  (else (iter prt (cdr l)))))
+  (cons a1st (iter (remainder a1st 2) aleft)))
