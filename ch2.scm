@@ -172,3 +172,48 @@
 	   (cons (car l) (iter prt (cdr l))))
 	  (else (iter prt (cdr l)))))
   (cons a1st (iter (remainder a1st 2) aleft)))
+
+; mapping over list
+(define (map f l)
+  (if (null? l) '()
+      (cons (f (car l)) (map f (cdr l)))))
+(define (scale-list l factor)
+  (map (lambda (x) (* x factor)) l))
+
+; exercise 2.23
+(define (for-each proc l)
+  (define (iter x lst)
+    (if (null? lst) x
+	(iter (proc (car lst)) (cdr lst))))
+  (iter '() l))
+
+(define (acc-list proc null-value combiner l)
+  (define (iter res lst)
+    (if (null? lst) res
+	(iter (combiner res (proc (car lst))) (cdr lst))))
+  (iter null-value l))
+
+(define (count-leaves l)
+  (if (null? l) 0
+      (if (pair? l)
+	  (acc-list count-leaves 0 + l) 1)))
+
+; exercise 2.27
+(define (deep-reverse l)
+  (define (iter res lst)
+    (if (null? lst) res
+	(let ((e1st (car lst)))
+	  (iter 
+	   (cons 
+	    (if (pair? e1st) (deep-reverse e1st) e1st) res) (cdr lst)))))
+  (iter '() l))
+
+; exercise 2.28
+(define (fringe t)
+  (define (iter res tt)
+    (if (null? tt) res
+	(if (not (pair? tt))
+	    (append res (list tt))
+	    (let ((e1st (car tt)))
+	      (iter (append res (if (pair? e1st) (fringe e1st) (list e1st))) (cdr tt))))))
+  (iter '() t))
