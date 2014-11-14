@@ -187,17 +187,6 @@
 	(iter (proc (car lst)) (cdr lst))))
   (iter '() l))
 
-(define (acc-list proc null-value combiner l)
-  (define (iter res lst)
-    (if (null? lst) res
-	(iter (combiner res (proc (car lst))) (cdr lst))))
-  (iter null-value l))
-
-(define (count-leaves l)
-  (if (null? l) 0
-      (if (pair? l)
-	  (acc-list count-leaves 0 + l) 1)))
-
 ; exercise 2.27
 (define (deep-reverse l)
   (define (iter res lst)
@@ -250,7 +239,7 @@
 (define (tree-map proc tr)
   (define (tree-map-iter t)
     (if (pair? t)
-	(map (lambda (st) (tree-map proc st)) t)
+	(map (lambda (st) (tree-map-iter st)) t)
 	(proc t)))
   (tree-map-iter tr))
 
@@ -272,3 +261,121 @@
       (let ((rest (subsets (cdr s))))
 	(append rest
 		(map (lambda (ss) (cons (car s) ss)) rest)))))
+
+; sequences as conventional interface
+; acc-list accumulates a list in terms of proc null-value and combiner
+(define (acc-list proc null-value combiner l)
+  (define (iter res lst)
+    (if (null? lst) res
+	(iter (combiner res (proc (car lst))) (cdr lst))))
+  (iter null-value l))
+
+(define (count-leaves l)
+  (if (null? l) 0
+      (if (pair? l)
+	  (acc-list count-leaves 0 + l) 1)))
+
+(define (sum-odd-square tree)
+  (if (null? tree)
+      0
+      (if (pair? tree)
+	  (acc-list sum-odd-square 0 + tree)
+	  (if (odd? tree) (square tree) 0))))
+
+(define (filter proc lst)
+  (cond ((null? lst) '())
+	((proc (car lst))
+	 (cons (car lst) (filter proc (cdr lst))))
+	(else (filter proc (cdr lst)))))
+
+(define (accumulate op initial sequence)
+  (define (iter res lst)
+    (if (null? lst)
+	res
+	(iter (op (car lst) res) (cdr lst))))
+  (iter initial sequence))
+
+(define (enumerate-interval low high)
+  (if (> low high)
+      '()
+      (cons low (enumerate-interval (+ low 1) high))))
+
+(define (enumerate-tree tree)
+  (cond ((null? tree) '())
+	((pair? tree)
+	 (append (enumerate-tree (car tree)) (enumerate-tree (cdr tree))))
+	(else (list tree))))
+
+(define (sum-odd-squares tree)
+  (accumulate +
+	      0
+	      (map 
+	       square 
+	       (filter odd? (enumerate-tree tree)))))
+
+(define (even-fibs n)
+  (accumulate cons
+	      '()
+	      (filter even?
+		      (map fib (enumerate-interval 0 n)))))
+
+(define (new-count-leaves tree)
+  (accumulate +
+	      0
+	      (map (lambda (x) 1)
+		   (enumerate-tree tree))))
+
+; exercise 2.33
+(define (e-map p seq)
+  (accumulate
+   (lambda (x y) (append y (list (p x))))
+   '() seq))
+(define (e-append sq1 sq2)
+  (accumulate cons sq2 (reverse sq1)))
+(define (e-length sq)
+  (accumulate (lambda (x y) (+ y 1)) 0 sq))
+
+; exercise 2.34
+(define (horner-eval x coefficient-seq)
+  (accumulate (lambda (coef res) (+ (* res x) coef))
+	      0
+	      coefficient-seq))
+
+; exercise 2.35
+(define (e-count-leaves tree)
+  (accumulate (lambda (x res) (+ res 1))
+	      0
+	      (enumerate-tree tree)))
+
+; exercise 2.36
+(define (accumulate-n op init seqs)
+  (define (iter res sqs)
+    (if (null? (car sqs))
+	res
+	(iter (append res (list (accumulate op init (map car sqs))))
+	      (map cdr sqs))))
+  (iter '() seqs))
+
+(define (e-accumulate-n op init seqs)
+  (if (null? (car seqs))
+      '()
+      (cons (accumulate op init (map car seqs))
+	    (e-accumulate-n op init (map cdr seqs)))))
+
+; exercise 2.37
+(define (dot-product v w)
+  (define (iter res vv ww)
+    (if (null? vv)
+	res
+	(iter (+ res (* (car vv) (car ww))) (cdr vv) (cdr ww))))
+    (iter 0 v w))
+
+(define (matrix-*-vector m v)
+  (map (lambda (vv) (dot-product vv v)) m))
+(define (transpose m)
+  (accumulate-n 
+   (lambda (x y) (append y (list x)))
+   '() m))
+(define (matrix-*-matrix m n)
+  (let ((cols (transpose n)))
+    (map (lambda (row) (matrix-*-vector cols row)) m)))
