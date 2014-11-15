@@ -503,3 +503,4 @@
 			 (enumerate-interval 1 n)))
 		    (queen-cols (- k 1))))))
   (queen-cols n))
+; exercise 2.43 -> http://wiki.drewhess.com/wiki/SICP_exercise_2.43
