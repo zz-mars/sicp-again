@@ -295,6 +295,13 @@
 	(iter (op (car lst) res) (cdr lst))))
   (iter initial sequence))
 
+(define (accumulate-op op initial sequence)
+  (define (iter res lst)
+    (if (null? lst)
+	res
+	(iter (op res (car lst)) (cdr lst))))
+  (iter initial sequence))
+
 (define (enumerate-interval low high)
   (if (> low high)
       '()
@@ -379,3 +386,120 @@
 (define (matrix-*-matrix m n)
   (let ((cols (transpose n)))
     (map (lambda (row) (matrix-*-vector cols row)) m)))
+
+; exercise 2.38
+(define (fold-left op initial seq)
+  (define (iter res rest)
+    (if (null? rest)
+	res
+	(iter (op res (car rest))
+	      (cdr rest))))
+  (iter initial seq))
+(define (fold-right op initial seq)
+  (if (null? seq)
+      initial
+      (op (car seq) (fold-right op initial (cdr seq)))))
+
+; exercise 2.39
+(define (reverse-fold-left seq)
+  (fold-left
+   (lambda (res ele) (cons ele res)) '() seq))
+(define (reverse-fold-right seq)
+  (fold-right
+   (lambda (ele rest) (append rest (list ele))) '() seq))
+
+; nested mappings
+(define (prime-pairs n)
+  (accumulate
+   append
+   '()
+   (map
+    (lambda (i) 
+      (map 
+       (lambda (k) (list i k (+ i k)))
+       (filter
+	(lambda (j) (prime? (+ i j)))
+	(enumerate-interval 1 (- i 1)))))
+    (enumerate-interval 1 n))))
+
+; flatmap : map each element in seq into a list
+; and accumulate all the mapped lists into a
+; list of list
+(define (flatmap proc seq)
+  (accumulate append '()
+	      (map proc seq)))
+
+(define (another-prime-pairs n)
+  (filter (lambda (p) (prime? (+ (car p) (cadr p))))
+	  (flatmap
+	   (lambda (i) (map (lambda (j) (list i j (+ i j)))
+			    (enumerate-interval 1 (- i 1))))
+	   (enumerate-interval 1 n))))
+
+
+(define (remove l s)
+  (filter (lambda (i) (not (= i s))) l))
+(define (permutations s)
+  (if (null? s) (list '())
+      (flatmap
+       (lambda (i)
+	 (map (lambda (j) (cons i j))
+	      (permutations (remove s i)))) s)))
+
+; exercise 2.40
+(define (unique-pairs n)
+  (flatmap
+   (lambda (i) (map (lambda (j) (list i j))
+		    (enumerate-interval 1 (- i 1))))
+   (enumerate-interval 2 n)))
+(define (e-prime-sum-pair n)
+  (filter (lambda (p) (prime? (+ (car p) (cadr p))))
+	  (unique-pairs n)))
+
+; exercise 2.41
+(define (unique-pairs-from-lst lst)
+  (flatmap (lambda (i) (map (lambda (j) (list i j)) (remove lst i))) lst))
+
+(define (unique-triples n)
+  (let ((intvl (enumerate-interval 1 n)))
+    (flatmap (lambda (i)
+	       (map (lambda (jk) (cons i jk))
+		    (unique-pairs-from-lst (remove intvl i))))
+	     intvl)))
+
+(define (find-triples n s)
+  (filter (lambda (tp) (= (+ (car tp) (cadr tp) (caddr tp)) s))
+	  (unique-triples n)))
+
+; exercise 2.42
+(define (queen n)
+  (define (safe? one-solution i)
+    (define (iter cnt solu)
+      (cond ((null? solu) #t)
+	    ((= i (car solu)) #f)
+	    ((= cnt (abs (- i (car solu)))) #f)
+	    (else (iter (+ cnt 1) (cdr solu)))))
+    (iter 1 one-solution))
+  (define (iter solutions)
+    (if (= (length (car solutions)) n)
+	solutions
+	(iter (flatmap 
+	       (lambda (one-solution) 
+		 (map (lambda (i) (cons i one-solution))
+		      (filter (lambda (i) (safe? one-solution i))
+			      (enumerate-interval 1 n))))
+	       solutions))))
+  (iter (list '())))
+
+(define (e-queen n)
+  (define (queen-cols k)
+    (if (= k 0)
+	(list '())
+	(filter
+	 (lambda (positions) (safe? k positions))
+	 (flatmap (lambda (rest-of-queens)
+		    (map (lambda (i)
+			   (adjoin-position i k rest-of-queens))
+			 (enumerate-interval 1 n)))
+		    (queen-cols (- k 1))))))
+  (queen-cols n))
