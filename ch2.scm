@@ -504,3 +504,19 @@
 		    (queen-cols (- k 1))))))
   (queen-cols n))
 ; exercise 2.43 -> http://wiki.drewhess.com/wiki/SICP_exercise_2.43
+
+; symbolic data
+(define (memq item l)
+  (if (null? l)
+      #f
+      (if (eq? item (car l))
+	  l (memq item (cdr l)))))
+
+; exercise 2.54
+(define (equal? a b)
+  (cond ((and (not (pair? a)) (not (pair? b)))
+	 (eq? a b))
+	((and (pair? a) (pair? b))
+	 (and (equal? (car a) (car b))
+	      (equal? (cdr a) (cdr b))))
+	(else #f)))
