@@ -520,3 +520,100 @@
 	 (and (equal? (car a) (car b))
 	      (equal? (cdr a) (cdr b))))
 	(else #f)))
+
+
+; symbolic differentiation
+(define (variable? x)
+  (symbol? x))
+(define (same-variable? x y)
+  (and (variable? x) (variable? y)
+       (eq? x y)))
+(define (=number? x num)
+  (and (number? x) (= x num)))
+(define (sum? x)
+  (and (pair? x) (eq? (car x) '+)))
+; assume a and b all generated from make-sum
+; so that they are all in simplified form
+(define (make-sum a b)
+  (cond ((=number? a 0) b)
+	((=number? b 0) a)
+	((and (number? a) (number? b))
+	 (+ a b))
+	((and (sum? a) (sum? b))
+	 (append a (cdr b)))
+	((and (sum? a) (not (sum? b)))
+	 (append a (list b)))
+	((and (not (sum? a)) (sum? b))
+	 (cons '+ (cons a (cdr b))))
+	(else (list '+ a b))))
+(define (addend x)
+  (cadr x))
+(define (augend x)
+  (let ((aug (cddr x)))
+    (if (> (length aug) 1)
+	(cons '+ aug) (car aug))))
+; product
+(define (product? x)
+  (and (pair? x) (eq? (car x) '*)))
+; assume a & b all generated from make-product
+; so that they are all in simplified form
+(define (make-product a b)
+  (cond ((or (=number? a 0) (=number? b 0)) 0)
+	((=number? a 1) b)
+	((=number? b 1) a)
+	((and (number? a) (number? b)) (* a b))
+	((and (product? a) (product? b))
+	 (append a (cdr b)))
+	((and (product? a) (not (product? b)))
+	 (append a (list b)))
+	((and (not (product? a)) (product? b))
+	 (cons '* (cons a (cdr b))))
+	(else (list '* a b))))
+
+(define (multiplier x)
+  (cadr x))
+(define (multiplicant x)
+  (let ((multplct (cddr x)))
+    (if (> (length multplct) 1)
+	(cons '* multplct) (car multplct))))
+
+; exercise 2.56
+; exponentiation extension
+(define (make-exponentiation bas expo)
+  (cond ((=number? expo 0) 1)
+	((=number? expo 1) bas)
+	(else (list '** bas expo))))
+(define (exponentiation? x)
+  (and (pair? x) (eq? (car x) '**)))
+(define (base x)
+  (cadr x))
+(define (exponent x)
+  (caddr x))
+; deriv : get the derivation of an expression
+; in terms of var
+(define (deriv expr var)
+  (cond ((number? expr) 0)
+	((variable? expr)
+	 (if (same-variable? expr var) 1 0))
+	((sum? expr)
+	 (make-sum (deriv (addend expr) var)
+		   (deriv (augend expr) var)))
+	((product? expr)
+	 (make-sum (make-product (deriv (multiplier expr) var)
+				 (multiplicant expr))
+		   (make-product (multiplier expr)
+				 (deriv (multiplicant expr) var))))
+	((exponentiation? expr)
+	 (let ((bs (base expr))
+	       (expo (exponent expr)))
+	   (make-product (make-product expo
+				       (make-exponentiation
+					bs (make-sum expo -1)))
+			 (deriv bs var))))
+	(else (error "unknown expression type -- DERIV" expr))))
+
+
+; exercise 2.58
+; deriv with infix representation
+; a is simple, skip
+; b is a little bit tough..
