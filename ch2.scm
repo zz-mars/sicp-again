@@ -617,3 +617,87 @@
 ; deriv with infix representation
 ; a is simple, skip
 ; b is a little bit tough..
+
+; example : representing set
+(define (element-of-set? x set)
+  (cond ((null? set) #f)
+	((eq? x (car set)) #t)
+	(else (element-of-set? x (cdr set)))))
+
+(define (adjoin-set x set)
+  (if (element-of-set? x set)
+      set
+      (cons x set)))
+
+(define (intersection-set-recur s1 s2)
+  (cond ((or (null? s1) (null? s2)) '())
+	(else (let ((s1e (car s1)))
+		(if (element-of-set? s1e s2)
+		    (cons s1e (intersection-set-recur (cdr s1) s2))
+		    (intersection-set-recur (cdr s1) s2))))))
+
+(define (intersection-set s1 s2)
+  (define (iter res s)
+    (if (null? s)
+	res
+	(let ((se (car s)))
+	  (iter (if (element-of-set? se s2)
+		    (cons se res) res)
+		(cdr s)))))
+  (if (null? s2)
+      '() (iter '() s1)))
+
+; exercise 2.59
+(define (union-set s1 s2)
+  (if (null? s1)
+      s2
+      (union-set (cdr s1)
+		 (let ((se (car s1)))
+		   (if (element-of-set? se s2)
+		       s2 (cons se s2))))))
+
+; sets as ordered list
+(define (element-of-set? x set)
+  (cond ((null? set) #f)
+	((= x (car set)) #t)
+	((> x (car set)) 
+	 (element-of-set? x (cdr set)))
+	(else #f)))
+
+(define (intersection-set set1 set2)
+  (define (iter res si1 si2)
+    (if (or (null? si1) (null? si2)) res
+	(let ((x (car si1))
+	      (y (car si2))
+	      (xl (cdr si1))
+	      (yl (cdr si2)))
+	  (cond ((> x y)
+		 (iter res si1 yl))
+		((= x y)
+		 (iter (cons x res) xl yl))
+		((< x y)
+		 (iter res xl si2))))))
+  (iter '() set1 set2))
+
+; exercise 2.61
+(define (adjoin-set x set)
+  (define (iter left right)
+    (if (null? right)
+	(append left (list x))
+	(let ((t (car right)))
+	  (cond ((= x t) set)
+		((> x t) (iter (append left (list t)) (cdr right)))
+		(else (append left (cons x right)))))))
+  (iter '() set))
+
+; exercise 2.62
+(define (union-set set1 set2)
+  (define (iter res s1 s2)
+    (cond ((null? s1) (append res s2))
+	  ((null? s2) (append res s1))
+	  (else (let ((x (car s1))
+		      (y (car s2)))
+		  (cond ((< x y) (iter (append res (list x)) (cdr s1) s2))
+			((= x y) (iter (append res (list x)) (cdr s1) (cdr s2)))
+			(else (iter (append res (list y)) s1 (cdr s2))))))))
+  (iter '() set1 set2))
