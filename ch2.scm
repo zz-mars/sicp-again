@@ -701,3 +701,61 @@
 			((= x y) (iter (append res (list x)) (cdr s1) (cdr s2)))
 			(else (iter (append res (list y)) s1 (cdr s2))))))))
   (iter '() set1 set2))
+
+; sets as binary tree
+(define (entry tree) (car tree))
+(define (left-branch tree) 
+  (cadr tree))
+(define (right-branch tree)
+  (caddr tree))
+(define (make-tree entry left right)
+  (list entry left right))
+(define (element-of-set? x set)
+  (if (null? set) #f
+      (let ((et (entry set)))
+	(cond ((< x et) (element-of-set? x (left-branch set)))
+	      ((= x et) #t)
+	      ((> x et) (element-of-set? x (right-branch set)))))))
+
+(define (adjoin-set x set)
+  (if (null? set) (make-tree x '() '())
+      (let ((et (entry set)))
+	(cond ((= x et) set)
+	      ((< x et) 
+	       (make-tree et 
+			  (adjoin-set x (left-branch set))
+			  (right-branch set)))
+	      ((> x et) 
+	       (make-tree et
+			  (left-branch set)
+			  (adjoin-set x (right-branch set))))))))
+
+; exercise 2.63
+(define (tree->list-1 tree)
+  (if (null? tree) '()
+      (append (tree->list-1 (left-branch tree))
+	      (cons (entry tree)
+		    (tree->list-1 (right-branch tree))))))
+(define (tree->list-2 tree)
+  (define (copy-to-list result tr)
+    (if (null? tr) result
+	(copy-to-list (cons (entry tr) (copy-to-list result (right-branch tr)))
+		      (left-branch tr))))
+  (copy-to-list '() tree))
+
+; exercise 2.64
+(define (partial-tree elements n)
+  (if (= n 0) (cons '() elements)
+      (let ((left-size (quotient (- n 1) 2)))
+	(let ((left-tmp (partial-tree elements left-size)))
+	  (let ((left-br (car left-tmp))
+		(et (cadr left-tmp))
+		(right-part (cddr left-tmp))
+		(right-size (- n left-size 1)))
+	    (let ((right-tmp (partial-tree right-part right-size)))
+	      (let ((right-br (car right-tmp))
+		    (remainings (cdr right-tmp)))
+		(cons (make-tree et left-br right-br) remainings))))))))
+
+(define (list->tree lst)
+  (car (partial-tree lst (length lst))))
