@@ -664,7 +664,7 @@
 	 (element-of-set? x (cdr set)))
 	(else #f)))
 
-(define (intersection-set set1 set2)
+(define (intersection-set-sl set1 set2)
   (define (iter res si1 si2)
     (if (or (null? si1) (null? si2)) res
 	(let ((x (car si1))
@@ -680,7 +680,7 @@
   (iter '() set1 set2))
 
 ; exercise 2.61
-(define (adjoin-set x set)
+(define (adjoin-set-sl x set)
   (define (iter left right)
     (if (null? right)
 	(append left (list x))
@@ -691,7 +691,7 @@
   (iter '() set))
 
 ; exercise 2.62
-(define (union-set set1 set2)
+(define (union-set-sl set1 set2)
   (define (iter res s1 s2)
     (cond ((null? s1) (append res s2))
 	  ((null? s2) (append res s1))
@@ -759,3 +759,12 @@
 
 (define (list->tree lst)
   (car (partial-tree lst (length lst))))
+
+; exercise 2.65
+(define (union-set s1 s2)
+  (list->tree (union-set-sl (tree->list-2 s1)
+			    (tree->list-2 s2))))
+(define (intersection-set s1 s2)
+  (list->tree (intersection-set-sl
+	       (tree->list-2 s1)
+	       (tree->list-2 s2))))
