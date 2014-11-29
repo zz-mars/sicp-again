@@ -768,3 +768,94 @@
   (list->tree (intersection-set-sl
 	       (tree->list-2 s1)
 	       (tree->list-2 s2))))
+
+; huffman tree
+(define (make-leaf sym weight)
+  (list 'leaf sym weight))
+(define (leaf? leaf)
+  (eq? (car leaf) 'leaf))
+(define (symbol-leaf leaf)
+  (cadr leaf))
+(define (weight-leaf leaf)
+  (caddr leaf))
+
+(define (symbols branch)
+  (if (leaf? branch)
+      (list (symbol-leaf branch))
+      (caddr branch)))
+(define (weight branch)
+  (if (leaf? branch)
+      (weight-leaf branch)
+      (cadddr branch)))
+(define (make-code-tree left right)
+  (list left
+	right
+	(append (symbols left) (symbols right))
+	(+ (weight left) (weight right))))
+(define (left-branch tree)
+  (car tree))
+(define (right-branch tree)
+  (cadr tree))
+
+(define (decode bits tree)
+  (define (choose-branch bit branch)
+    (cond ((= bit 0) (left-branch branch))
+	  ((= bit 1) (right-branch branch))
+	  (else (error "unknown encode bit" bit))))
+  (define (decode-iter res bits branch)
+    (if (null? bits) res
+	(let ((next-branch (choose-branch (car bits) branch)))
+	  (if (leaf? next-branch)
+	      (decode-iter (append res (symbols next-branch))
+			   (cdr bits) tree)
+	      (decode-iter res (cdr bits) next-branch)))))
+  (decode-iter '() bits tree))
+
+; sets of weighted elements
+(define (adjoin-set x set)
+  (if (null? set) (list x)
+      (if (> (weight x) (weight (car set)))
+	  (cons (car set) (adjoin-set x (cdr set)))
+	  (cons x set))))
+(define (make-leaf-set pairs)
+  (define (iter set pairs)
+    (if (null? pairs) set
+	(iter (adjoin-set (make-leaf (car (car pairs)) (cadr (car pairs)))
+			  set)
+	      (cdr pairs))))
+  (iter '() pairs))
+
+(define (generate-huffman-tree pairs)
+  (define (iter leaf-set)
+    (if (= (length leaf-set) 1) (car leaf-set)
+	(iter (adjoin-set
+	       (make-code-tree (car leaf-set)
+			       (cadr leaf-set))
+	       (cddr leaf-set)))))
+  (iter (make-leaf-set pairs)))
+
+(define (raw-element-of-set x set)
+  (cond ((null? set) #f)
+	((eq? x (car set)) #t)
+	(else (raw-element-of-set x (cdr set)))))
+; exercise 2.68
+(define (encode-symbol sym tree)
+  (define (iter res branch)
+    (let ((lbr (left-branch branch))
+	  (rbr (right-branch branch)))
+      (cond ((raw-element-of-set sym (symbols lbr))
+	     (if (leaf? lbr) (append res '(0))
+		 (iter (append res '(0)) lbr)))
+	    ((raw-element-of-set sym (symbols rbr))
+	     (if (leaf? rbr) (append res '(1))
+		 (iter (append res '(1)) rbr)))
+	    (else (error "cannot encode -> " sym)))))
+  (iter '() tree))
+(define (encode msg tree)
+  (if (null? msg) '()
+      (append (encode-symbol (car msg) tree)
+	      (encode (cdr msg) tree))))
+
+; exercise 2.70
+(define lyric-symbols
+  '((a 2) (na 16) (boom 1) (sha 3) (get 2) (yip 9) (job 2) (wah 1)))
