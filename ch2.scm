@@ -1000,6 +1000,7 @@
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number)
        (lambda (x) (= x 0)))
+  (put 'sine 'scheme-number sin)
   'done)
 (define (install-rational-package)
   ; internal procedure
@@ -1049,6 +1050,8 @@
 			  (= (denom x) (denom y)))))
   (put '=zero? '(rational)
        (lambda (z) (= (numer z) 0)))
+  (put 'sine 'rational
+       (lambda (x) (sin (/ (* 1.0 (numer x)) (denom x)))))
   'done)
 
 ; complex number package
@@ -1059,17 +1062,17 @@
     ((get 'make-from-mag-ang 'polar) r a))
   ;; internal procedures
   (define (add-complex z1 z2)
-    (make-from-real-imag (+ (real-part z1) (real-part z2))
-			 (+ (imag-part z1) (imag-part z2))))
+    (make-from-real-imag (apply-generic 'add (real-part z1) (real-part z2))
+			 (apply-generic 'add (imag-part z1) (imag-part z2))))
   (define (sub-complex z1 z2)
-    (make-from-real-imag (- (real-part z1) (real-part z2))
-			 (- (imag-part z1) (imag-part z2))))
+    (make-from-real-imag (apply-generic 'sub (real-part z1) (real-part z2))
+			 (apply-generic 'sub (imag-part z1) (imag-part z2))))
   (define (mul-complex z1 z2)
-    (make-from-mag-ang (* (magnitude z1) (magnitude z2))
-		       (+ (angle z1) (angle z2))))
+    (make-from-mag-ang (apply-generic 'mul (magnitude z1) (magnitude z2))
+		       (apply-generic 'add (angle z1) (angle z2))))
   (define (div-complex z1 z2)
-    (make-from-mag-ang (/ (magnitude z1) (magnitude z2))
-		       (- (angle z1) (angle z2))))
+    (make-from-mag-ang (apply-generic 'div (magnitude z1) (magnitude z2))
+		       (apply-generic 'sub (angle z1) (angle z2))))
   ; interfaces
   (define (tag x) (attach-tag 'complex x))
   (put 'add '(complex complex)
@@ -1098,3 +1101,147 @@
   ((get 'make-from-real-imag 'complex) x y))
 (define (make-complex-from-mag-ang r a)
   ((get 'make-from-mag-ang 'complex) r a))
+
+; coercion
+(define (apply-generic op . args)
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+	  (apply proc (map contents args))
+	  (if (= (length args) 2)
+	      (let ((t1 (car type-tags))
+		    (t2 (cadr types-tags))
+		    (c1 (car args))
+		    (c2 (cadr args)))
+		(let ((t1->t2 (get-coercion t1 t2))
+		      (t2->t2 (get-coercion t2 t1)))
+		  (cond (t1->t2 
+			 (apply-generic op (t1->t2 c1) c2))
+			(t2->t1
+			 (apply-generic op c1 (t2->t1 c2)))
+			(else (error "no method for " (list t1 t2))))))
+	      (error "no method for " (list op type-tags)))))))
+
+; exercise 2.81
+(define (apply-generic op . args)
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+	  (apply proc (map contents args))
+	  (if (= (length args) 2)
+	      (let ((t1 (car type-tags))
+		    (t2 (cadr type-tags)))
+		(if (eq? t1 t2)
+		    (error "no method for " (list op type-tags))
+		    (let ((c1 (car args))
+			  (c2 (cadr args))
+			  (t1->t2 (get-coercion t1 t2))
+			  (t2->t2 (get-coercion t2 t1)))
+		      (cond (t1->t2 
+			     (apply-generic op (t1->t2 c1) c2))
+			    (t2->t1
+			     (apply-generic op c1 (t2->t1 c2)))
+			    (else (error "no method for " (list t1 t2)))))))
+	      (error "no method for " (list op type-tags)))))))
+
+; exercise 2.82
+(define (apply-geberic op . args)
+  (define (apply-generic-helper op args)
+    (let ((type-tags (map type-tag args)))
+      (let ((proc (get op type-tags)))
+	(if proc
+	    (apply proc (map contents args))
+	    (let ((arg-len (length args)))
+	      (cond ((<= arg-len 1) (error "no method for " (list op args)))
+		    ((= arg-len 2)
+		     (let ((t1 (car type-tags))
+			   (t2 (cadr type-tags)))
+		       (if (eq? t1 t2)
+			   (error "no method for " (list op type-tags))
+			   (let ((c1 (car args))
+				 (c2 (cadr args))
+				 (t1->t2 (get-coercion t1 t2))
+				 (t2->t2 (get-coercion t2 t1)))
+			     (cond (t1->t2 
+				    (apply-generic op (t1->t2 c1) c2))
+				   (t2->t1
+				    (apply-generic op c1 (t2->t1 c2)))
+				   (else (error "no method for " (list t1 t2))))))))
+		    (else
+		     (apply-generic op (car args) (apply-generic-helper op (cdr args))))))))))
+  (apply-generic-helper op args))
+
+; exercise 2.83
+(define (install-real-package)
+  (define (make-real x) (* x 1.0))
+  (define (tag x) (attach-tag 'real x))
+  (put 'add '(real real)
+       (lambda (x y) (tag (+ x y))))
+  (put 'sub '(real real)
+       (lambda (x y) (tag (- x y))))
+  (put 'mul '(real real)
+       (lambda (x y) (tag (* x y))))
+  (put 'div '(real real)
+       (lambda (x y) (tag (/ x y))))
+  'done)
+(define (make-real x) (attach-tag 'real (* x 1.0)))
+(define (install-generic-raise)
+  (put 'raise 'integer
+       (lambda (x) (make-rat x 1)))
+  (put 'raise 'rational
+       (lambda (x) (make-real (/ (* 1.0 (denom x)) (numer x)))))
+  (put 'raise 'real
+       (lambda (x) (make-from-real-imag x 0)))
+  (put 'level 'integer 0)
+  (put 'level 'rational 1)
+  (put 'level 'real 2)
+  (put 'level complex 3)
+  'done)
+(define (raise x)
+  (let ((raise-proc (get 'raise (type-tag x))))
+    (if raise-proc
+	(raise-proc (contents x))
+	(error "no raise proc for " x))))
+
+; exercise 2.84 and exercise 2.85
+(define (install-project-package)
+  (put 'project 'complex
+       (lambda (x) (make-real (real-part x))))
+  (put 'project 'real
+       (lambda (x) (quotient x)))
+  'done)
+(define (drop x)
+  (let ((projecter (get 'project (type-tag x))))
+    (if projecter
+	(let ((projected (project (contents x))))
+	  (let ((raise-back (raise projected)))
+	    (if ((get 'equ? (map type-tag (x raise-back)))
+		 x raise-back) (drop projected) x))) x)))
+(define (apply-geberic op . args)
+  (define (apply-generic-helper op args)
+    (let ((type-tags (map type-tag args)))
+      (let ((proc (get op type-tags)))
+	(if proc
+	    (apply proc (map contents args))
+	    (let ((arg-len (length args)))
+	      (cond ((<= arg-len 1) (error "no method for " (list op args)))
+		    ((= arg-len 2)
+		     (let ((t1 (get 'level (car type-tags)))
+			   (t2 (get 'level (cadr type-tags)))
+			   (c1 (car args))
+			   (c2 (cadr args)))
+		       (cond ((= t1 t2)
+			      (if (eq? (car type-tags) (cadr type-tags))
+				  (error "no method for " (list op type-tags))
+				  (apply-generic op (raise c1) (raise c2))))
+			     ((< t1 t2)
+			      (apply-generic op (raise c1) c2))
+			     (else (apply-generic op c1 (raise c2))))))
+		    (else
+		     (apply-generic op (car args) (apply-generic-helper op (cdr args))))))))))
+  (drop (apply-generic-helper op args)))
+
+; exercise 2.86
+; change 1: arithmatic operation in install-complex-package
+;  should be re-written with apply-generic
+; change 2: implement sine and cosine in integer, rational and real package
