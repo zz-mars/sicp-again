@@ -1293,6 +1293,20 @@
 	(the-empty-termlist)
 	(add-terms (mul-term-by-all-terms (first-term L1) L2)
 		   (mul-terms (rest-terms L1) L2))))
+  (define (div-terms L1 L2)
+    (if (empty-termlist? L1) (list (the-empty-termlist) (the-empty-termlist))
+	(let ((t1 (first-term L1))
+	      (t2 (first-term L2)))
+	  (if (> (order t2) (order t1))
+	      (list (the-empty-termlist) L1)
+	      (let ((new-order (- (order t1) (order t2)))
+		    (new-coeff (div (coeff t1) (coeff t2))))
+		(let ((rest-result 
+		       (div-terms (add-terms 
+				   L1 (negation (mul-term-by-all-terms
+						 (make-term new-order new-coeff) L2))) L2)))
+		  (list (add-terms (list (make-term new-order new-coeff)) (car rest-result))
+			(cadr rest-result))))))))
   (define (tag sp) (attach-tag 'sparse sp))
   (put 'add-terms '(sparse sparse)
        (lambda (L1 L2) (tag (add-terms L1 L2))))
@@ -1300,7 +1314,12 @@
        (lambda (L1 L2) (tag (mul-term L1 L2))))
   (put 'negation 'sparse
        (lambda (p)
-	 (tag (map (lambda (t) (make-term (order t) (- (coeff t)))) p))))
+	 (tag (map (lambda (t) (make-term (order t) (sub 0 (coeff t)))) p))))
+  (put 'top-order 'sparse
+       (lambda (L)
+	 (if (empty-termlist? L) 0
+	     (order (first-term L)))))
+  (put 'coeff 'sparse coeff)
   'done)
 
 (define (install-dense-termlist)
@@ -1332,8 +1351,13 @@
   (put 'mul-terms '(dense dense)
        (lambda (L1 L2) (tag (mul-terms L1 L2))))
   (put 'negation 'dense
-       (lambda (p) (tag (map (lambda (x) (- x)) p))))
-'done)
+       (lambda (p) (tag (map (lambda (x) (sub 0 x)) p))))
+  (put 'top-order 'dense
+       (lambda (L) 
+	 (if (empty-ternlist? L) 0
+	     (- (length L) 1))))
+  (put 'coeff 'dense coeff)
+  'done)
 
 (define (add-terms L1 L2)
   (let ((add-term-proc (get 'add-term (map type-tag (list L1 L2)))))
@@ -1345,21 +1369,6 @@
     (if mul-term-proc
 	(mul-term-proc (contents L1) (contents L2))
 	(error "cannot mul-terms -> " (list L1 L2)))))
-
-(define (add-poly p1 p2)
-  (if (same-variable? (variable p1) (variable p2))
-      (make-poly (variable p1)
-		 (add-terms (term-list p1) (term-list p2)))
-      (error "Polys not the same variable -- ADD-POLY"
-	     (list p1 p2))))
-
-(define (mul-poly p1 p2)
-  (if (same-variable? (variable p1) (variable p2))
-      (make-poly (variable p1)
-		 (mul-terms (term-list p1) (term-list p2)))
-      (error "Polys not the same variable -- MUL-POLY"
-	     (list p1 p2))))
-
 (define (negation-term termlist)
   (let ((neg-proc (get 'negation (type-tag termlist))))
     (if neg-proc
@@ -1369,6 +1378,23 @@
 (define (install-poly-package)
   (define (make-poly var term-list)
     (cons var term-list))
+  (define (add-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+	(make-poly (variable p1)
+		   (add-terms (term-list p1) (term-list p2)))
+	(error "Polys not the same variable -- ADD-POLY"
+	       (list p1 p2))))
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+	(make-poly (variable p1)
+		   (mul-terms (term-list p1) (term-list p2)))
+	(error "Polys not the same variable -- MUL-POLY"
+	       (list p1 p2))))
+  (define (div-poly p1 p2)
+    (define (div-ter res p1 p2)
+      (let
+    (if (same-variable? (variable p1) (variable p2))
+	(div-iter 0 p1 p2)))
   (define (variable p) (car p))
   (define (term-list p) (cdr p))
   (define (negation p)
