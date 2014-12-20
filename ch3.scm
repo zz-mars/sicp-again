@@ -73,3 +73,28 @@
 				   (call-the-cops)
 				   (error "Incorrect Password!"))))))
 		 (else (error "Unknown operation -> " (list op)))))))
+
+; benefits of introducing assignment
+; exercise 3.7
+(define (make-joint acc old-pwd new-pwd)
+  (lambda (op)
+    (cond ((eq? op 'withdraw)
+	   (lambda (passwd amount)
+	     ((acc 'withdraw)
+	      (if (eq? passwd new-pwd)
+		  old-pwd 'invalidpasswd) amount)))
+	  ((eq? op 'deposite)
+	   (lambda (passwd amount)
+	     ((acc 'deposite)
+	      (if (eq? passwd new-pwd)
+		  old-pwd 'invalidpasswd) amount)))
+	  (else (error "Unknown operation -> " (list op))))))
+
+; exercise 3.8
+(define (make-f)
+  (let ((switch 1))
+    (lambda (v)
+      (if (= switch 1)
+	  (if (> v 0) v
+	      (begin (set! switch 0) 0)) 0))))
+	  
