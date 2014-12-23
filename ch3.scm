@@ -98,3 +98,38 @@
 	  (if (> v 0) v
 	      (begin (set! switch 0) 0)) 0))))
 	  
+; exercise 3.14
+(define (mystery x)
+  (define (loop x y)
+    (if (null? x) y
+	(let ((left-stuff (cdr x)))
+	  (set-cdr! x y)
+	  (loop left-stuff x))))
+  (loop x '()))
+
+; exercise 3.16
+(define (count-pairs x)
+  (let ((s '()))
+    (define (insert x)
+      (if (null? s) (set! s (list x))
+	  (set-cdr! s (cons x (cdr s)))))
+    (define (in-set s x)
+      (cond ((null? s) #f)
+	    ((eq? x (car s)) #t)
+	    (else (in-set (cdr s) x))))
+    (define (count-pairs-helper x)
+      (if (not (pair? x)) 0
+	  (+ (count-pairs-helper (car x))
+	     (count-pairs-helper (cdr x))
+	     (if (in-set s x) 0
+		 (begin (insert x) 1)))))
+    (count-pairs-helper x)
+    (length s)))
+		
+(define (last-pair x)
+  (if (null? (cdr x))
+      x (last-pair (cdr x))))
+(define (make-cycle x)
+  (set-cdr! (last-pair x) x))
+
+; exercise 3.18
