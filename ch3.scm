@@ -243,3 +243,95 @@
 	    (dq-set-front dq '())
 	    (set-cdr! (rear-deque dq) '()))
 	(cdr node))))
+
+; representing tables
+(define (assoc key records)
+  (if (null? records) #f
+      (if (equal? key (caar records)) (car records)
+	  (assoc key (cdr records)))))
+
+(define (lookup key table)
+  (let ((record (assoc key (cdr table))))
+    (if record (cdr record) #f)))
+
+(define (insert! key value table)
+  (let ((record (assoc key (cdr table))))
+    (if record (set-cdr! record value)
+	(set-cdr! table (cons (cons key value) (cdr table)))))
+  'ok)
+
+(define (make-table) (list '*table*))
+
+; two dimensional table
+(define (td-lookup k1 k2 table)
+  (let ((record4k1 (assoc k1 (cdr table))))
+    (if record4k1
+	(let ((record (assoc k2 (cdr record4k1))))
+	  (if record (cdr record) #f)) #f)))
+
+(define (td-insert! k1 k2 value table)
+  (let ((record4k1 (assoc k1 (cdr table))))
+    (if record4k1
+	(let ((record (assoc k2 (cdr record4k1))))
+	  (if record (set-cdr! record value)
+	      (set-cdr! record4k1 (cons (cons k2 value) (cdr record4k1)))))
+	(set-cdr! table (cons (list k1 (cons k2 value)) (cdr table)))))
+  'ok)
+
+; local tables
+(define (make-local-table)
+  (let ((table (list '*table*)))
+    (define (td-lookup k1 k2)
+      (let ((record4k1 (assoc k1 (cdr table))))
+	(if record4k1
+	    (let ((record (assoc k2 (cdr record4k1))))
+	      (if record (cdr record) #f)) #f)))
+    (define (td-insert! k1 k2 value)
+      (let ((record4k1 (assoc k1 (cdr table))))
+	(if record4k1
+	    (let ((record (assoc k2 (cdr record4k1))))
+	      (if record (set-cdr! record value)
+		  (set-cdr! record4k1 (cons (cons k2 value) (cdr record4k1)))))
+	    (set-cdr! table (cons (list k1 (cons k2 value)) (cdr table)))))
+      'ok)
+    (lambda (op)
+      (cond ((eq? op 'lookup) td-lookup)
+	    ((eq? op 'insert) td-insert!)
+	    (else (error "local table -> unknown operation!"))))))
+
+; exercise 3.25
+(define (safe-assoc key records)
+  (cond ((null? records) 0)
+	((not (pair? records)) 1)
+	(else 
+	 (let ((first-rec (car records)))
+	   (if (not (pair? first-rec)) 2
+	       (if (equal? key (car first-rec)) first-rec
+		   (safe-assoc key (cdr records))))))))
+
+(define (generic-lookup table . keys)
+  (define (lookup-iter t keys)
+    (if (null? keys) t
+	(let ((next-record (safe-assoc (car keys) (cdr t))))
+	  (if (pair? next-record)
+	      (lookup-iter next-record (cdr keys)) #f))))
+  (lookup-iter table keys))
+
+(define (generic-insert! table value . keys)
+  (define (insert-iter t keys)
+    (let ((key (car keys))
+	  (left-keys (cdr keys)))
+      (let ((record (safe-assoc key (cdr t))))
+	(cond ((pair? record)
+	       (if (null? left-keys) (set-cdr! record value)
+		   (insert-iter record left-keys)))
+	      ((or (= record 1) (= record 2))
+	       (begin (set-cdr! t '())
+		      (insert-iter t keys)))
+	      ((null? left-keys)
+	       (set-cdr! t (cons (cons key value) '())))
+	      (else
+	       (let ((newnode (cons key '())))
+		 (begin (set-cdr! t newnode)
+			(insert-iter newnode left-keys))))))))
+  (insert-iter table keys))
