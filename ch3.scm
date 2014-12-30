@@ -335,3 +335,19 @@
 		 (begin (set-cdr! t newnode)
 			(insert-iter newnode left-keys))))))))
   (insert-iter table keys))
+
+; exercise 3.27
+(define (memorize f)
+  (let ((table (make-table)))
+    (lambda (n)
+      (let ((val (lookup n table)))
+	(or val (let ((value (f n)))
+		  (insert! n value table) value))))))
+(define mem-fib
+  (memorize 
+   (lambda (n)
+	   (cond ((= n 0) 0)
+		 ((= n 1) 1)
+		 (else
+		  (+ (mem-fib (- n 1))
+		     (mem-fib (- n 2))))))))
