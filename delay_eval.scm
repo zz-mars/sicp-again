@@ -46,3 +46,25 @@
 ;       (apply stream-map
 ;	      (cons proc (map stream-cdr argstreams))))))
 
+; infinite streams
+(define (integers-starting-from n)
+  (cons-stream n (integers-starting-from (+ n 1))))
+(define (divisible? x y) (= (remainder x y) 0))
+;(define no-sevens 
+;  (stream-filter (lambda (x) (not (divisible? x 7)))
+;		 (integers-starting-from 1)))
+
+(define (fib-gen a b)
+  (if (> b 300) the-empty-stream
+      (cons-stream a (fib-gen b (+ a b)))))
+(define fibs (fib-gen 0 1))
+
+(define (sieve stream)
+  (if (stream-empty? stream)
+      the-empty-stream
+      (cons-stream 
+       (stream-car stream)
+       (sieve 
+	(stream-filter
+	 (lambda (x) (not (divisible? x (stream-car stream))))
+	 (stream-cdr stream))))))
