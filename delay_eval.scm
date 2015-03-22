@@ -14,7 +14,7 @@
 	     (stream-for-each proc (stream-cdr s)))))
 (define (display-stream s)
   (stream-for-each display-line s))
-(define (dispaly-line x)
+(define (display-line x)
   (newline)
   (display x))
 
@@ -60,11 +60,20 @@
 (define fibs (fib-gen 0 1))
 
 (define (sieve stream)
-  (if (stream-empty? stream)
-      the-empty-stream
-      (cons-stream 
-       (stream-car stream)
-       (sieve 
+ (if (stream-null? stream)
+  the-empty-stream
+  (cons-stream 
+   (stream-car stream)
+   (sieve 
 	(stream-filter
 	 (lambda (x) (not (divisible? x (stream-car stream))))
 	 (stream-cdr stream))))))
+
+;(define (sieve stream)
+;	(cons-stream 
+;	 (stream-car stream)
+;	 (sieve 
+;	  (stream-filter (lambda (x) (not (divisible? x (stream-car stream))))
+;	   (stream-cdr stream)))))
+
+; defining streams implicitly
