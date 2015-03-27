@@ -1,0 +1,16 @@
+; utils
+(define (square x) (* x x))
+(define (divides? a b)
+  (= (remainder b a) 0))
+(define (smallest-divisor n)
+  (define (iter candidate)
+    (cond ((> (square candidate) n) n)
+	  ((divides? candidate n) candidate)
+	  (else (iter (+ 2 candidate)))))
+  (if (divides? 2 n) 2
+      (iter 3)))
+(define (prime? n)
+  (= n (smallest-divisor n)))
+(define (enumerate-interval low high)
+	(if (> low high) '()
+		(cons low (enumerate-interval (+ low 1) high))))
