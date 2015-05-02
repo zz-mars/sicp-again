@@ -8,3 +8,19 @@
 (display-line sum)
 (define z (mstream-filter (lambda (x) (= (remainder x 5) 0)) seq))
 (display-line sum)
+
+; exercise 3.82
+(define (element-stream a b c d)
+	(cons-stream (cons (rand-range a b) (rand-range c d))
+		(element-stream a b c d)))
+(define (experiment-stream experiment elem-stream)
+	(stream-map (lambda (x) (experiment (car x) (cdr x)))
+		elem-stream))
+
+(define (counting-ratio expr-stream passed total)
+	(define (next passed total)
+		(cons-stream (/ passed total)
+			(counting-ratio (stream-cdr expr-stream) passed total)))
+	(if (stream-car expr-stream)
+		(next (+ passed 1) (+ total 1))
+		(next passed (+ total 1))))
