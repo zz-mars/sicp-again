@@ -264,3 +264,9 @@
 		 (else (lookup (cdr vars) (cdr vals)))))
   (lookup (frame-variables frame)
 		  (frame-values frame))))
+
+; exercise 4.11
+; new representation of frames
+; frame as list of (var val) pairs
+; ([var1 val1] [var2 val2]..)
+; env as a list of frames : first-frame and enclosing-frame
