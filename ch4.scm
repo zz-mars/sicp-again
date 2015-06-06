@@ -1,9 +1,9 @@
 (define apply-in-underlying-scheme apply)
 (define (eval exp env)
-; (newline)
-; (display "now eval -> ")
-; (display exp)
-; (newline)
+ (newline)
+ (display "now eval -> ")
+ (display exp)
+ (newline)
 	(cond ((self-evaluating? exp) exp)
 		  ((variable? exp) (lookup-variable-value exp env))
 		  ((quoted? exp) (text-of-quotation exp))
@@ -14,6 +14,8 @@
 										 (lambda-body exp) env))
 		  ((begin? exp) (eval-sequence (begin-actions exp) env))
 		  ((cond? exp) (eval (cond->if exp) env))
+		  ((let? exp) (eval (let->combination exp) env))
+		  ((let*? exp) (eval (let*->nested-lets exp) env))
 		 ; ((and? exp) (eval-and exp env))
 		 ; ((or? exp) (eval-or exp env))
 		  ((application? exp)
@@ -73,10 +75,50 @@
 	(if (pair? exp)
 		(eq? (car exp) tag) #f))
 
+; -------------------- support let expression start
+(define (let? exp) (tagged-list? exp 'let))
+(define (let-vars-vals exp) (cadr exp))
+(define (let-vv-part vars-vals f)
+ (if (null? vars-vals) '()
+  (cons (f (car vars-vals)) (let-vv-part (cdr vars-vals) f))))
+(define (let-vars vv) (let-vv-part vv car))
+(define (let-vals vv) (let-vv-part vv cadr))
+(define (let-body exp) (cddr exp))
+(define (make-let vv body) (cons 'let (cons vv body)))
+; syntactic transformation
+(define (let->combination exp)
+ (if (pair? (cadr exp))
+   (let ((vars-vals (let-vars-vals exp)))
+     (cons (make-lambda (let-vars vars-vals) (let-body exp)) (let-vals vars-vals)))
+   (let ((func (cadr exp))
+		 (vars-vals (caddr exp))
+		 (body (cdddr exp)))
+	(let ((params (let-vv-part vars-vals car))
+		  (args (let-vv-part vars-vals cadr)))
+	 (sequence->exp 
+		(list (make-define func (make-lambda params body))
+	          (cons func args)))))))
+; -------------------- support let expression end
+
+; -------------------- support let* expression start
+(define (make-let* vv body) (cons 'let* (cons vv body)))
+(define (let*? exp) (tagged-list? exp 'let*))
+(define (let*-vars-vals exp) (cadr exp))
+(define (let*-body exp) (cddr exp))
+(define (let*->nested-lets exp)
+ (let ((vv (let*-vars-vals exp))
+	   (body (let*-body exp)))
+  (if (null? vv) body
+   (make-let (list (car vv))
+	(let ((maybe-nested-let (let*->nested-lets (make-let* (cdr vv) body))))
+	 (if (let? maybe-nested-let) (list maybe-nested-let) maybe-nested-let))))))
+; -------------------- support let* expression end
+
 (define (assignment? exp) (tagged-list? exp 'set!))
 (define (assignment-variable exp) (cadr exp))
 (define (assignment-value exp) (caddr exp))
 
+(define (make-define var val) (list 'define var val))
 (define (definition? exp) (tagged-list? exp 'define))
 (define (definition-variable exp)
 	(let ((v (cadr exp)))
