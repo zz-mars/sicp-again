@@ -117,6 +117,7 @@
 (define (assignment? exp) (tagged-list? exp 'set!))
 (define (assignment-variable exp) (cadr exp))
 (define (assignment-value exp) (caddr exp))
+(define (make-set var val) (cons 'set! (list var val)))
 
 (define (make-define var val) (list 'define var val))
 (define (definition? exp) (tagged-list? exp 'define))
@@ -254,7 +255,7 @@
 
 ; for compound procedures
 (define (make-procedure parameters body env)
- (list 'procedure parameters body env))
+ (list 'procedure parameters (scan-out-defines body) env))
 (define (compound-procedure? proc) (tagged-list? proc 'procedure))
 (define (procedure-parameters proc) (cadr proc))
 (define (procedure-body proc) (caddr proc))
@@ -277,11 +278,15 @@
   (if (< (length vars) (length vals))
    (error "Too many arguments supplied" vars vals)
    (error "Too few arguments supplied" vars vals))))
+(define (unassigned? val) (eq? val '*unassigned*))
 (define (lookup-variable-value var env)
  (define (env-loop env)
   (define (lookup vars vals)
    (cond ((null? vars) (env-loop (enclosing-environment env)))
-		 ((eq? var (car vars)) (car vals))
+		 ((eq? var (car vars)) 
+		  (let ((maybe-val (car vals)))
+		   (if (unassigned? maybe-val)
+			(error "Unassigned variable" var) maybe-val)))
 		 (else (lookup (cdr vars) (cdr vals)))))
   (if (eq? env the-empty-environment)
       (error "Unbound variable" var)
@@ -312,6 +317,34 @@
 		 (else (lookup (cdr vars) (cdr vals)))))
   (lookup (frame-variables frame)
 		  (frame-values frame))))
+
+(define (my-map lst f)
+ (if (null? lst) '()
+	 (cons (f (car lst)) (my-map (cdr lst) f))))
+(define (my-map2 lst0 lst1 f)
+ (define (iter l0 l1)
+  (if (null? l0) '()
+   (cons (f (car l0) (car l1)) (iter (cdr l0) (cdr l1)))))
+ (if (not (= (length lst0) (length lst1)))
+  (error "calling my-map2 with two list of different length!")
+  (iter lst0 lst1)))
+(define (my-filter lst f)
+ (cond ((null? lst) '())
+	   ((f (car lst)) (cons (car lst) (my-filter (cdr lst) f)))
+	   (else (my-filter (cdr lst) f))))
+(define (my-append lst0 lst1)
+ (if (null? lst0) lst1
+  (cons (car lst0) (my-append (cdr lst0) lst1))))
+; exercise 4.16
+(define (scan-out-defines p-body)
+ (let ((defines (my-filter p-body definition?))
+	   (the-rest (my-filter p-body (lambda (x) (not (definition? x))))))
+  (if (null? defines) p-body
+   (let ((vars (my-map defines definition-variable))
+		 (vals (my-map defines definition-value)))
+	(let ((let-var-vals (my-map vars (lambda (x) (list x '(quote *unassigned*)))))
+		  (sets (my-map2 vars vals make-set)))
+	 (list (make-let let-var-vals (my-append sets the-rest))))))))
 
 ; exercise 4.11
 ; new representation of frames
