@@ -55,8 +55,7 @@
 		  ((application? exp) (analyze-application exp))
 		  (else (error "Unknown expression type -- EVAL" exp))))
 
-(define (analyze-self-evaluating exp)
- (lambda (env) exp))
+(define (analyze-self-evaluating exp) (lambda (env) exp))
 (define (analyze-variable exp)
  (lambda (env) (lookup-variable-value exp env)))
 (define (analyze-quoted exp)
@@ -77,13 +76,21 @@
     (if (true? (pproc env)) (cproc env) (aproc env)))))
 (define (analyze-lambda exp)
  (let ((vars (lambda-parameters exp))
-	   (pbody (analyze-sequence (lambda-body exp))))
-  (lambda (env) (make-procedure vars pbody env))))
+	   (lbd-body (lambda-body exp)))
+  (let ((transformed-body (scan-out-defines lbd-body)))
+   (let ((pbody ((if (let? transformed-body) analyze analyze-sequence) transformed-body)))
+    (lambda (env) (make-procedure vars pbody env))))))
 (define (analyze-sequence exp)
  (define (iter f rest)
   (if (null? rest) f
    (iter (lambda (env) (f env) ((car rest) env)) (cdr rest))))
+; (display "analyze-sequence -> ")
+; (display exp)
+; (newline)
  (let ((pseqs (my-map exp analyze)))
+;  (display "analyze-sequence after map -> ")
+;  (display pseqs)
+;  (newline)
   (if (null? pseqs) (error "nothing to analyze")
    (iter (car pseqs) (cdr pseqs)))))
 (define (analyze-application exp)
@@ -92,30 +99,35 @@
   (lambda (env)
    (execute-application (fproc env) (my-map aprocs (lambda (x) (x env)))))))
 (define (execute-application proc args)
+; (display "execute-application -> ")
+; (display proc)
+; (newline)
+; (display args)
+; (newline)
  (cond ((primitive-procedure? proc)
 		(apply-primitive-procedure proc args))
   ((compound-procedure? proc)
-   ((procedure-body proc) 
+   ((procedure-body proc)
 	(extend-environment 
 	 (procedure-parameters proc) args
 	 (procedure-environment proc))))
   (else
    (error "Unknown procedure type -- EXECUTE-APPLICATION" proc))))
 
-(define (apply procedure arguments)
-; (newline)
-; (display "apply -> ")
-; (display procedure)
-	(cond ((primitive-procedure? procedure)
-		   (apply-primitive-procedure procedure arguments))
-		  ((compound-procedure? procedure)
-		   (eval-sequence
-				(procedure-body procedure)
-				(extend-environment
-				 (procedure-parameters procedure)
-				 arguments
-				 (procedure-environment procedure))))
-		  (else (error "Unknown procedure type -- APPLY" procedure))))
+;(define (apply procedure arguments)
+;; (newline)
+;; (display "apply -> ")
+;; (display procedure)
+;	(cond ((primitive-procedure? procedure)
+;		   (apply-primitive-procedure procedure arguments))
+;		  ((compound-procedure? procedure)
+;		   (eval-sequence
+;				(procedure-body procedure)
+;				(extend-environment
+;				 (procedure-parameters procedure)
+;				 arguments
+;				 (procedure-environment procedure))))
+;		  (else (error "Unknown procedure type -- APPLY" procedure))))
 
 (define (list-of-values exps env)
 	(if (no-operands? exps) '()
@@ -352,7 +364,8 @@
 
 ; for compound procedures
 (define (make-procedure parameters body env)
- (list 'procedure parameters (scan-out-defines body) env))
+ (list 'procedure parameters body env))
+; (list 'procedure parameters (scan-out-defines body) env))
 (define (compound-procedure? proc) (tagged-list? proc 'procedure))
 (define (procedure-parameters proc) (cadr proc))
 (define (procedure-body proc) (caddr proc))
