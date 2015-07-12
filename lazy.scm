@@ -1,0 +1,5 @@
+(define (unless condition usual-value exceptional-value)
+ (if condition exceptional-value usual-value))
+(define (fact n)
+ (unless (= n 1)
+  (* n (fact (- n 1))) 1))
