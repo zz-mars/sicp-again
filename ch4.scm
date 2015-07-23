@@ -23,7 +23,9 @@
 		 ; ((and? exp) (eval-and exp env))
 		 ; ((or? exp) (eval-or exp env))
 		  ((application? exp)
+		   ; get the real operator
 		   (apply (actual-value (operator exp) env)
+			      ; defer the evaluation of operands for compound procedure
 				  (operands exp) env))
 		  (else (error "Unknown expression type -- EVAL" exp))))
 
