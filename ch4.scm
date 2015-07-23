@@ -23,22 +23,55 @@
 		 ; ((and? exp) (eval-and exp env))
 		 ; ((or? exp) (eval-or exp env))
 		  ((application? exp)
-		   (apply (eval (operator exp) env)
-				  (list-of-values (operands exp) env)))
+		   (apply (actual-value (operator exp) env)
+				  (operands exp) env))
 		  (else (error "Unknown expression type -- EVAL" exp))))
+
+; wrap exp & env into thunk
+; defer the evaluating to the last possible moment
+(define (delay-it exp env) (list 'thunk exp env))
+(define (thunk? obj) (tagged-list? obj 'thunk))
+(define (thunk-exp thunk) (cadr thunk))
+(define (thunk-env thunk) (caddr thunk))
+; memorize the thunk result
+(define (evaluated-thunk? obj) (tagged-list? obj 'evaluated-thunk))
+(define (thunk-value obj) (cadr obj))
+(define (force-it obj)
+ (cond ((thunk? obj)
+		(let ((value (actual-value (thunk-exp obj) (thunk-env obj))))
+		 (set-car! obj 'evaluated-thunk)
+		 (set-car! (cdr obj) value)
+		 (set-cdr! (cdr obj) '()) value))
+  ((evaluated-thunk? obj) (thunk-value objj))
+  (else obj)))
+; actual-value & force-it recursively calling each other
+(define (actual-value exp env)
+ (force-it (eval exp env)))
+
+(define (list-of-arg-values exps env)
+ (my-map exps 
+  (lambda (exp) (actual-value exp env))))
+
+(define (list-of-delayed-args exps env)
+ (my-map exps 
+  (lambda (exp) (delay-it exp env))))
 
 (define (apply procedure arguments)
  (newline)
  (display "apply -> ")
  (display procedure)
 	(cond ((primitive-procedure? procedure)
-		   (apply-primitive-procedure procedure arguments))
+		   (apply-primitive-procedure 
+			procedure 
+			; get the real value for primitive procedure
+			(list-of-arg-values arguments env)))
 		  ((compound-procedure? procedure)
 		   (eval-sequence
 				(procedure-body procedure)
 				(extend-environment
 				 (procedure-parameters procedure)
-				 arguments
+				 ; delay evaluating for compound procedures
+				 (list-of-delayed-args arguments env)
 				 (procedure-environment procedure))))
 		  (else (error "Unknown procedure type -- APPLY" procedure))))
 
@@ -48,7 +81,7 @@
 			  (list-of-values (rest-operands exps) env))))
 
 (define (eval-if exp env)
-	(if (true? (eval (if-predicate exp) env))
+	(if (true? (actual-value (if-predicate exp) env))
 		(eval (if-consequent exp) env)
 		(eval (if-alternative exp) env)))
 
@@ -413,12 +446,12 @@
  (apply-in-underlying-scheme
   (primitive-implementation proc) args))
 
-(define input-prompt ";;; M-Eval input:")
-(define output-prompt ";;; M-Eval value:")
+(define input-prompt ";;; L-Eval input:")
+(define output-prompt ";;; L-Eval value:")
 (define (driver-loop)
  (prompt-for-input input-prompt)
  (let ((input (read)))
-  (let ((output (eval input the-global-environment)))
+  (let ((output (actual-value input the-global-environment)))
    (annouce-output output-prompt)
    (user-print output)))
  (driver-loop))
