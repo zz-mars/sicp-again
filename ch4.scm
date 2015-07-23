@@ -58,10 +58,12 @@
  (my-map exps 
   (lambda (exp) (delay-it exp env))))
 
-(define (apply procedure arguments)
+(define (apply procedure arguments env)
  (newline)
  (display "apply -> ")
  (display procedure)
+; (display " : ")
+; (display arguments)
 	(cond ((primitive-procedure? procedure)
 		   (apply-primitive-procedure 
 			procedure 
