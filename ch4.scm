@@ -41,10 +41,12 @@
 (define (force-it obj)
  (cond ((thunk? obj)
 		(let ((value (actual-value (thunk-exp obj) (thunk-env obj))))
+		 ; memorize
 		 (set-car! obj 'evaluated-thunk)
 		 (set-car! (cdr obj) value)
-		 (set-cdr! (cdr obj) '()) value))
-  ((evaluated-thunk? obj) (thunk-value objj))
+		 (set-cdr! (cdr obj) '()) 
+		 value))
+  ((evaluated-thunk? obj) (thunk-value obj))
   (else obj)))
 ; actual-value & force-it recursively calling each other
 (define (actual-value exp env)
@@ -62,8 +64,8 @@
  (newline)
  (display "apply -> ")
  (display procedure)
-; (display " : ")
-; (display arguments)
+ (display " : ")
+ (display arguments)
 	(cond ((primitive-procedure? procedure)
 		   (apply-primitive-procedure 
 			procedure 
