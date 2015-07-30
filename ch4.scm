@@ -32,7 +32,9 @@
 ; wrap exp & env into thunk
 ; defer the evaluating to the last possible moment
 (define (delay-it exp env) (list 'thunk exp env))
-(define (thunk? obj) (tagged-list? obj 'thunk))
+(define (delay-it-with-memo exp env) (list 'thunk-with-memo exp env))
+(define (thunk? obj) (or (tagged-list? obj 'thunk) 
+					  (tagged-list? obj 'thunk-with-memo)))
 (define (thunk-exp thunk) (cadr thunk))
 (define (thunk-env thunk) (caddr thunk))
 ; memorize the thunk result
@@ -41,10 +43,13 @@
 (define (force-it obj)
  (cond ((thunk? obj)
 		(let ((value (actual-value (thunk-exp obj) (thunk-env obj))))
+		 ; memorize for thunk-with-memo
+		 (if (tagged-list? obj 'thunk-with-memo)
 		 ; memorize
 		 (set-car! obj 'evaluated-thunk)
 		 (set-car! (cdr obj) value)
-		 (set-cdr! (cdr obj) '()) 
+		 (set-cdr! (cdr obj) '()))
+		 ; return value for both thunk
 		 value))
   ((evaluated-thunk? obj) (thunk-value obj))
   (else obj)))
@@ -60,6 +65,24 @@
  (my-map exps 
   (lambda (exp) (delay-it exp env))))
 
+(define (list-of-transformed-args how-to-delay exps env)
+ (my-map2 how-to-delay exps (lambda (h e) (h e env))))
+
+(define (lazy-param param) 
+ (and (pair? param) (eq? (cadr param) 'lazy)))
+(define (lazy-memo-param param) 
+ (and (pair? param) (eq? (cadr param) 'lazy-memo)))
+(define (delay-proc-mapper param)
+ (cond 
+  ; eval the real value for oridinary param, 
+  ; no delay is used
+  ((symbol? param) eval)
+  ; for lazy param, delay it without memo
+  ((lazy-param param) delay-it)
+  ; for lazy memo param, delay it with memorization
+  ((lazy-memo-param param) delay-it-with-memo)
+  (else (error "delay-proc-mapper : unsupported param : " param))))
+
 (define (apply procedure arguments env)
  (newline)
  (display "apply -> ")
@@ -74,11 +97,13 @@
 		  ((compound-procedure? procedure)
 		   (eval-sequence
 				(procedure-body procedure)
-				(extend-environment
-				 (procedure-parameters procedure)
-				 ; delay evaluating for compound procedures
-				 (list-of-delayed-args arguments env)
-				 (procedure-environment procedure))))
+				(let ((procedure-params (procedure-parameters procedures)))
+				 (let ((how-to-delay (my-map procedure-params delay-proc-mapper))
+					   (real-params (my-map procedure-params (lambda (x) (if (pair? x) (car x) x)))))
+				  (extend-environment real-params
+				   ; delay evaluating for compound procedures
+				   (list-of-transformed-args how-to-delay arguments env)
+				   (procedure-environment procedure))))))
 		  (else (error "Unknown procedure type -- APPLY" procedure))))
 
 (define (list-of-values exps env)
