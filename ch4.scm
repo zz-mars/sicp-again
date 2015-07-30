@@ -46,9 +46,10 @@
 		 ; memorize for thunk-with-memo
 		 (if (tagged-list? obj 'thunk-with-memo)
 		 ; memorize
+		 (begin
 		 (set-car! obj 'evaluated-thunk)
 		 (set-car! (cdr obj) value)
-		 (set-cdr! (cdr obj) '()))
+		 (set-cdr! (cdr obj) '())))
 		 ; return value for both thunk
 		 value))
   ((evaluated-thunk? obj) (thunk-value obj))
@@ -68,9 +69,9 @@
 (define (list-of-transformed-args how-to-delay exps env)
  (my-map2 how-to-delay exps (lambda (h e) (h e env))))
 
-(define (lazy-param param) 
+(define (lazy-param? param) 
  (and (pair? param) (eq? (cadr param) 'lazy)))
-(define (lazy-memo-param param) 
+(define (lazy-memo-param? param) 
  (and (pair? param) (eq? (cadr param) 'lazy-memo)))
 (define (delay-proc-mapper param)
  (cond 
@@ -78,9 +79,9 @@
   ; no delay is used
   ((symbol? param) eval)
   ; for lazy param, delay it without memo
-  ((lazy-param param) delay-it)
+  ((lazy-param? param) delay-it)
   ; for lazy memo param, delay it with memorization
-  ((lazy-memo-param param) delay-it-with-memo)
+  ((lazy-memo-param? param) delay-it-with-memo)
   (else (error "delay-proc-mapper : unsupported param : " param))))
 
 (define (apply procedure arguments env)
@@ -97,7 +98,7 @@
 		  ((compound-procedure? procedure)
 		   (eval-sequence
 				(procedure-body procedure)
-				(let ((procedure-params (procedure-parameters procedures)))
+				(let ((procedure-params (procedure-parameters procedure)))
 				 (let ((how-to-delay (my-map procedure-params delay-proc-mapper))
 					   (real-params (my-map procedure-params (lambda (x) (if (pair? x) (car x) x)))))
 				  (extend-environment real-params
@@ -339,8 +340,17 @@
 (define (true? x) (not (eq? x #f)))
 (define (false? x) (eq? x #f))
 
+(define (parameters-check params)
+ (my-map params
+  (lambda (p)
+   (cond ((symbol? p) '())
+	((and (pair? p) (eq? (length p) 2)
+	  (or (lazy-param? p) (lazy-memo-param? p))) '())
+	(else (error "make-procedure : param check fail!" p))))))
 ; for compound procedures
 (define (make-procedure parameters body env)
+ ; check parameters first
+ (parameters-check parameters)
  (list 'procedure parameters (scan-out-defines body) env))
 (define (compound-procedure? proc) (tagged-list? proc 'procedure))
 (define (procedure-parameters proc) (cadr proc))
