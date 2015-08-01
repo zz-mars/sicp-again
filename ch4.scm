@@ -1,9 +1,9 @@
 (define apply-in-underlying-scheme apply)
 (define (eval exp env)
- (newline)
- (display "now eval -> ")
- (display exp)
- (newline)
+; (newline)
+; (display "now eval -> ")
+; (display exp)
+; (newline)
 ; (display "current env -> ")
 ; (display env)
 ; (newline)
@@ -75,9 +75,11 @@
  (and (pair? param) (eq? (cadr param) 'lazy-memo)))
 (define (delay-proc-mapper param)
  (cond 
-  ; eval the real value for oridinary param, 
+  ; get the real value for oridinary param, 
   ; no delay is used
-  ((symbol? param) eval)
+  ;((symbol? param) actual-value)
+  ; default setting : everything is delayed with memorization
+  ((symbol? param) delay-it-with-memo)
   ; for lazy param, delay it without memo
   ((lazy-param? param) delay-it)
   ; for lazy memo param, delay it with memorization
@@ -85,11 +87,11 @@
   (else (error "delay-proc-mapper : unsupported param : " param))))
 
 (define (apply procedure arguments env)
- (newline)
- (display "apply -> ")
- (display procedure)
- (display " : ")
- (display arguments)
+; (newline)
+; (display "apply -> ")
+; (display procedure)
+; (display " : ")
+; (display arguments)
 	(cond ((primitive-procedure? procedure)
 		   (apply-primitive-procedure 
 			procedure 
@@ -437,6 +439,7 @@
  (if (null? lst0) lst1
   (cons (car lst0) (my-append (cdr lst0) lst1))))
 ; exercise 4.16
+; do not scan out defines..
 (define (scan-out-defines p-body)
  (let ((defines (my-filter p-body definition?))
 	   (the-rest (my-filter p-body (lambda (x) (not (definition? x))))))
