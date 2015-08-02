@@ -9,7 +9,7 @@
   (cons (proc (car iterms))
    (map proc (cdr iterms)))))
 (define (scale-list iterms factor)
- (map iterms (lambda (x) (* x factor))))
+ (map (lambda (x) (* x factor)) iterms))
 (define (add-lists list1 list2)
  (cond((null? list1) list2)
   ((null? list2) list1)
@@ -20,7 +20,7 @@
 (define (integral integrand initial-value dt)
  (define int 
   (cons initial-value 
-   (add-lists int (scale-list integrand dt))))
+   (add-lists (scale-list integrand dt) int)))
  int)
 (define (solve f y0 dt)
  (define y (integral dy y0 dt))
